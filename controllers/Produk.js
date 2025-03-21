@@ -1,0 +1,97 @@
+import Produk from "../models/ProdukModel.js";
+
+export const insertProduk = async (body) => {
+  const produkExist = await Produk.findOne({
+    kode_produk: body.kode_produk,
+  });
+
+  if (produkExist) {
+    throw new Error("Kode produk sudah ada");
+  }
+
+  if (body.stok < 0) {
+    throw new Error("Stok tidak boleh minus");
+  }
+
+  if (body.harga <= 0) {
+    throw new Error("Harga tidak boleh minus atau nol");
+  }
+
+  const newProduk = new Produk(body);
+  await newProduk.save();
+  return newProduk;
+}
+
+export const createProduk = async (req, res) => {
+  try {
+    const newProduk = await insertProduk(req.body);
+
+    res.status(201).json({ Produk: newProduk });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ msg: "Server error" });
+  }
+};
+
+export const getAllProduk = async (req, res) => {
+  try {
+    const produkList = await Produk.find();
+    res.json({ Produk: produkList });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ msg: "Server error" });
+  }
+};
+
+export const getProdukByKode = async (req, res) => {
+  try {
+    const Produk = await Produk.findOne({ kode_produk: req.params.kode });
+    if (!Produk) {
+      return res.status(404).json({ msg: "Produk tidak ditemukan" });
+    }
+    res.json({ ...Produk._doc });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ msg: "Server error" });
+  }
+};
+
+export const updateProduk = async (req, res) => {
+  try {
+    const updatedProduk = await Produk.findByIdAndUpdate(
+      req.params.kode,
+      { $set: req.body },
+      { new: true, runValidators: true },
+    );
+
+    if (!updatedProduk) {
+      return res.status(404).json({ msg: "Produk tidak ditemukan" });
+    }
+
+    res.json({ Produk: updatedProduk });
+  } catch (error) {
+    console.log(error);
+    if (error.kind === "ObjectId") {
+      return res.status(404).json({ msg: "Product not found" });
+    }
+    res.status(500).json({ msg: "Server error" });
+  }
+};
+
+export const deleteProduk = async (req, res) => {
+  try {
+    const deletedProduk = await Produk.findByIdAndDelete(req.params.id);
+
+    if (!deletedProduk) {
+      return res.status(404).json({ msg: "Product not found" });
+    }
+
+    res.json({ msg: "Product deleted successfully", Produk: deletedProduk });
+  } catch (error) {
+    console.log(error);
+    if (error.kind === "ObjectId") {
+      return res.status(404).json({ msg: "Product not found" });
+    }
+    res.status(500).json({ msg: "Server error" });
+  }
+};
