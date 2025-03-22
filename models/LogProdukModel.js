@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 const { Schema } = mongoose;
 
 const logProdukSchema = new Schema({
-  Produk: {
+  produk: {
     type: Schema.Types.ObjectId,
     ref: "Produk",
     required: true,
@@ -13,11 +13,12 @@ const logProdukSchema = new Schema({
   },
   harga: {
     type: Number,
-    unsigned: true,
+    min: 0, 
   },
   stok: {
     type: Number,
     required: true,
+    min: 0,
   },
   isProdukMasuk: {
     type: Boolean,

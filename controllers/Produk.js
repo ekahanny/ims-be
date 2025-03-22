@@ -20,7 +20,7 @@ export const insertProduk = async (body) => {
   const newProduk = new Produk(body);
   await newProduk.save();
   return newProduk;
-}
+};
 
 export const createProduk = async (req, res) => {
   try {
@@ -45,11 +45,11 @@ export const getAllProduk = async (req, res) => {
 
 export const getProdukByKode = async (req, res) => {
   try {
-    const Produk = await Produk.findOne({ kode_produk: req.params.kode });
-    if (!Produk) {
+    const produk = await Produk.findOne({ kode_produk: req.params.kode });
+    if (!produk) {
       return res.status(404).json({ msg: "Produk tidak ditemukan" });
     }
-    res.json({ ...Produk._doc });
+    res.json({ ...produk._doc });
   } catch (error) {
     console.log(error);
     res.status(500).json({ msg: "Server error" });
@@ -61,7 +61,7 @@ export const updateProduk = async (req, res) => {
     const updatedProduk = await Produk.findByIdAndUpdate(
       req.params.kode,
       { $set: req.body },
-      { new: true, runValidators: true },
+      { new: true, runValidators: true }
     );
 
     if (!updatedProduk) {

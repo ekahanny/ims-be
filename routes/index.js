@@ -12,12 +12,31 @@ import {
   updatePassword,
   verifyResetToken,
 } from "../controllers/Users.js";
-import { insertLog } from "../controllers/LogProduk.js";
+import {
+  createLog,
+  deleteLog,
+  getAllLogs,
+  getLogById,
+  updateLog,
+} from "../controllers/LogProduk.js";
 import { authMiddleware } from "../middleware/auth.js";
-import { createKategori, deleteKategori, getAllKategori, getKategoriById, updateKategori } from "../controllers/Kategori.js";
+import {
+  createKategori,
+  deleteKategori,
+  getAllKategori,
+  getKategoriById,
+  updateKategori,
+} from "../controllers/Kategori.js";
 import { dashboard } from "../controllers/Dashboard.js";
 
 const router = express.Router();
+
+// log produk
+router.post("/produk/log", createLog);
+router.get("/produk/log", getAllLogs);
+router.get("/produk/log/:kode", getLogById);
+router.put("/produk/log/:kode", updateLog);
+router.delete("/produk/log/:kode", deleteLog);
 
 // produk
 router.post("/produk", authMiddleware, createProduk);
@@ -27,9 +46,6 @@ router.put("/produk/:kode", updateProduk);
 
 // dashboard
 router.get("/dashboard", dashboard);
-
-// log produk
-router.post("/produk/log", insertLog);
 
 // Kategori
 router.post("/kategori", createKategori);
