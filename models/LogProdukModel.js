@@ -9,11 +9,10 @@ const logProdukSchema = new Schema({
   },
   tanggal: {
     type: Date,
-    default: Date.now,
   },
   harga: {
     type: Number,
-    min: 0, 
+    min: 0,
   },
   stok: {
     type: Number,
@@ -24,6 +23,7 @@ const logProdukSchema = new Schema({
     type: Boolean,
     required: true,
   },
+  createdAt: { type: Date, default: Date.now },
 });
 
 const LogProduk = mongoose.model("LogProduk", logProdukSchema);

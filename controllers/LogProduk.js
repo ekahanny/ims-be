@@ -15,7 +15,7 @@ export const insertLog = async (req, res) => {
       stok,
       kategori,
       isProdukMasuk,
-      tanggal_masuk,
+      tanggal,
     } = req.body;
 
     if (
@@ -36,6 +36,7 @@ export const insertLog = async (req, res) => {
         harga,
         stok: 0,
         kategori,
+        tanggal,
       });
       produkExists = newProduk;
     }
@@ -59,7 +60,7 @@ export const insertLog = async (req, res) => {
       stok,
       isProdukMasuk,
       harga,
-      tanggal_masuk: tanggal_masuk || new Date(),
+      tanggal,
     });
 
     await newLog.save();
@@ -81,7 +82,13 @@ export const createLog = async (req, res) => {
 
 export const getAllLogs = async (req, res) => {
   try {
-    const logs = await LogProduk.find();
+    const logs = await LogProduk.find()
+      .populate({
+        path: "produk",
+        model: "Produk",
+      })
+      .lean() 
+      .exec();
     res.json({ LogProduk: logs });
   } catch (error) {
     console.log(error);

@@ -34,9 +34,9 @@ const router = express.Router();
 // log produk
 router.post("/produk/log", createLog);
 router.get("/produk/log", getAllLogs);
-router.get("/produk/log/:kode", getLogById);
-router.put("/produk/log/:kode", updateLog);
-router.delete("/produk/log/:kode", deleteLog);
+router.get("/produk/log/:id", getLogById);
+router.put("/produk/log/:id", updateLog);
+router.delete("/produk/log/:id", deleteLog);
 
 // produk
 router.post("/produk", authMiddleware, createProduk);

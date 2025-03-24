@@ -15,10 +15,6 @@ const produkSchema = new Schema({
     type: String,
     required: true,
   },
-  // tanggal_masuk: {
-  //   type: Date,
-  //   required: true,
-  // },
   harga: {
     type: Number,
     unsigned: true,
