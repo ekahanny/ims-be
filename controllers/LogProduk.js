@@ -87,7 +87,7 @@ export const getAllLogs = async (req, res) => {
         path: "produk",
         model: "Produk",
       })
-      .lean() 
+      .lean()
       .exec();
     res.json({ LogProduk: logs });
   } catch (error) {
@@ -111,17 +111,35 @@ export const getLogById = async (req, res) => {
 
 export const updateLog = async (req, res) => {
   try {
+    // 1. Cari log berdasarkan ID yang diberikan di params
+    const log = await LogProduk.findById(req.params.id);
+    
+    if (!log) {
+      return res.status(404).json({ msg: "Log tidak ditemukan" });
+    }
+
+    // 2. Ambil ID produk dari log yang ditemukan
+    const produkId = log.produk._id;
+
+    // 3. Update data produk berdasarkan produkId
+    const updatedProduk = await Produk.findByIdAndUpdate(
+      produkId,
+      { $set: req.body },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedProduk) {
+      return res.status(404).json({ msg: "Produk tidak ditemukan" });
+    }
+
+    // 4. Update log dengan data yang baru
     const updatedLog = await LogProduk.findByIdAndUpdate(
       req.params.id,
       { $set: req.body },
       { new: true, runValidators: true }
     );
 
-    if (!updatedLog) {
-      return res.status(404).json({ msg: "Log tidak ditemukan" });
-    }
-
-    res.json({ LogProduk: updatedLog });
+    res.json({ msg: "Log dan Produk berhasil diperbarui", updatedLog, updatedProduk });
   } catch (error) {
     console.log(error);
     res.status(500).json({ msg: "Server error" });
