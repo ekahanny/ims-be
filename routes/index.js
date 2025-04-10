@@ -1,7 +1,9 @@
 import express from "express";
 import {
   createProduk,
+  deleteProduk,
   getAllProduk,
+  getProdukById,
   getProdukByKode,
   updateProduk,
 } from "../controllers/Produk.js";
@@ -41,8 +43,10 @@ router.delete("/produk/log/:id", deleteLog);
 // produk
 router.post("/produk", authMiddleware, createProduk);
 router.get("/produk", getAllProduk);
-router.get("/produk/:kode", getProdukByKode);
-router.put("/produk/:kode", updateProduk);
+// router.get("/produk/:kode", getProdukByKode);
+router.get("/produk/:id", getProdukById);
+router.put("/produk/:id", updateProduk);
+router.delete("/produk/:id", deleteProduk);
 
 // dashboard
 router.get("/dashboard", dashboard);

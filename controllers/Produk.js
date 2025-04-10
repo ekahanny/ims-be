@@ -56,6 +56,22 @@ export const getProdukByKode = async (req, res) => {
   }
 };
 
+export const getProdukById = async (req, res) => {
+  try {
+    const produk = await Produk.findById(req.params.id);
+    if (!produk) {
+      return res.status(404).json({ msg: "Produk tidak ditemukan" });
+    }
+    res.json({ ...produk._doc });
+  } catch (error) {
+    console.log(error);
+    if (error.kind === "ObjectId") {
+      return res.status(400).json({ msg: "ID tidak valid" });
+    }
+    res.status(500).json({ msg: "Server error" });
+  }
+};
+
 export const updateProduk = async (req, res) => {
   try {
     const updatedProduk = await Produk.findByIdAndUpdate(
