@@ -75,7 +75,7 @@ export const getProdukById = async (req, res) => {
 export const updateProduk = async (req, res) => {
   try {
     const updatedProduk = await Produk.findByIdAndUpdate(
-      req.params.kode,
+      req.params.id,
       { $set: req.body },
       { new: true, runValidators: true }
     );
