@@ -155,9 +155,23 @@ export const updateLog = async (req, res) => {
 export const deleteLog = async (req, res) => {
   try {
     const deletedLog = await LogProduk.findByIdAndDelete(req.params.id);
+
     if (!deletedLog) {
       return res.status(404).json({ msg: "Log tidak ditemukan" });
     }
+
+    const produk = await Produk.findById(deletedLog.produk);
+    if (!produk) {
+      return res.status(404).json({ msg: "Produk tidak ditemukan" });
+    }
+
+    if (deletedLog.isProdukMasuk) {
+      produk.stok -= deletedLog.stok;
+    } else {
+      produk.stok += deletedLog.stok;
+    }
+    produk.save();
+
     res.json({ msg: "Log berhasil dihapus", LogProduk: deletedLog });
   } catch (error) {
     console.log(error);
