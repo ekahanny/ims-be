@@ -124,13 +124,24 @@ export const updateLog = async (req, res) => {
     }
 
     // 3. Update log dengan data yang baru
-    const updatedLog = await LogProduk.findByIdAndUpdate(
-      req.params.id,
-      { $set: req.body, produk: produk._id },
-      { new: true, runValidators: true }
-    );
-    console.log(log);
+    const updatedLog = await LogProduk.findById(req.params.id);
+    if (updatedLog.stok !== req.body.stok) {
+      const selisih = updatedLog.stok - req.body.stok;
+      if (updatedLog.isProdukMasuk) {
+        produk.stok -= selisih;
+      } else {
+        produk.stok += selisih;
+      }
+      produk.save();
+    }
 
+    updatedLog.harga = req.body.harga;
+    updatedLog.kode_produk = req.body.kode_produk;
+    updatedLog.tanggal = req.body.tanggal;
+    updatedLog.stok = req.body.stok;
+    updatedLog.save();
+
+    console.log("updated log: ", updatedLog);
     res.json({
       msg: "Log dan Produk berhasil diperbarui",
       updatedLog,
