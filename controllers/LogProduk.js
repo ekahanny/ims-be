@@ -41,6 +41,24 @@ export const insertLog = async (req, res) => {
       produkExists = newProduk;
     }
 
+    // Cari tanggal berapa suatu barang masuk pertama kali
+    const firstInProdLog = await LogProduk.findOne({
+      produk: produkExists._id,
+      isProdukMasuk: true,
+    }).sort({ tanggal: 1 });
+
+    // Jika ini adalah log keluar dan ada log masuk sebelumnya
+    if (!isProdukMasuk && firstInProdLog) {
+      const inputDate = new Date(tanggal);
+      const firstInDate = new Date(firstInProdLog.tanggal);
+
+      if (inputDate < firstInDate) {
+        return res.status(400).json({
+          msg: `Tanggal keluar tidak boleh lebih awal dari tanggal masuk pertama (${firstInDate.toLocaleDateString()})`,
+        });
+      }
+    }
+
     if (!isProdukMasuk && stok > produkExists.stok) {
       return res.status(400).json({ msg: "Stok tidak cukup" });
     }
