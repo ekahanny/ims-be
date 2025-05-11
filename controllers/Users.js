@@ -7,7 +7,7 @@ export const getUser = async (req, res) => {
   try {
     const user = await Users.findOne(
       { _id: req.userId },
-      { refreshToken: 0, password: 0 },
+      { refreshToken: 0, password: 0 }
     );
     res.json({ user });
   } catch (error) {
@@ -42,9 +42,9 @@ export const register = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
-    const user = await Users.findOne({ email: req.body.email });
+    const user = await Users.findOne({ username: req.body.username });
     if (!user) {
-      return res.status(404).json({ msg: "Email tidak ditemukan" });
+      return res.status(404).json({ msg: "Username tidak ditemukan" });
     }
 
     const match = bcrypt.compareSync(req.body.password, user.password);
@@ -63,7 +63,7 @@ export const login = async (req, res) => {
       process.env.ACCESS_TOKEN_SECRET,
       {
         expiresIn: "1d",
-      },
+      }
     );
 
     res.json({ accessToken });
@@ -112,7 +112,7 @@ export const resetPassword = async (req, res) => {
       process.env.RESET_TOKEN_SECRET,
       {
         expiresIn: "15m",
-      },
+      }
     );
 
     // Send email with reset token

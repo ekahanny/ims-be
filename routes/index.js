@@ -8,6 +8,7 @@ import {
   updateProduk,
 } from "../controllers/Produk.js";
 import {
+  getUser,
   login,
   register,
   resetPassword,
@@ -59,6 +60,7 @@ router.put("/kategori/:id", updateKategori);
 router.delete("/kategori/:id", deleteKategori);
 
 // Auth
+router.get("/user", getUser);
 router.post("/login", login);
 router.post("/register", register);
 router.post("/reset-password", resetPassword);
