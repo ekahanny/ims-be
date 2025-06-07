@@ -57,6 +57,7 @@ export const login = async (req, res) => {
     const name = user.name;
     const username = user.username;
     const email = user.email;
+    const password = user.password;
 
     const accessToken = jwt.sign(
       { userId, name, username, email },
@@ -66,77 +67,44 @@ export const login = async (req, res) => {
       }
     );
 
-    res.json({ accessToken, username });
+    res.json({ accessToken, username, email, password });
   } catch (error) {
     console.log(error);
     res.status(500).json({ msg: "Server error" });
   }
 };
 
-// Fungsi untuk mengirim email reset password
-const sendPasswordResetEmail = async (email, token) => {
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
-
-  const mailOptions = {
-    from: process.env.EMAIL_USER,
-    to: email,
-    subject: "Reset Password",
-    html: `
-      <p>Hello,</p>
-      <p>You requested a password reset. Please click this <a href="${process.env.CLIENT_URL}/reset/${token}">link</a> to reset your password.</p>
-      <p>If you didn't request this, please ignore this email.</p>
-    `,
-  };
-
-  return transporter.sendMail(mailOptions);
-};
-
-export const resetPassword = async (req, res) => {
+export const updateUsername = async (req, res) => {
   try {
-    const { email } = req.body;
-    const user = await Users.findOne({ email });
+    const { newUsername } = req.body;
+    const userId = req.userId; // Diambil dari middleware JWT
 
-    if (!user) {
-      return res.status(404).json({ msg: "Email not found" });
+    // Cek apakah username baru sudah dipakai oleh user lain
+    const existingUser = await Users.findOne({ username: newUsername });
+    if (existingUser && existingUser._id.toString() !== userId) {
+      return res.status(400).json({ msg: "Username sudah digunakan" });
     }
 
-    // Generate reset token
-    const resetToken = jwt.sign(
-      { id: user._id },
-      process.env.RESET_TOKEN_SECRET,
+    // Update username
+    await Users.findByIdAndUpdate(userId, { username: newUsername });
+
+    // Generate token baru dengan username yang diperbarui
+    const user = await Users.findById(userId);
+    const accessToken = jwt.sign(
       {
-        expiresIn: "15m",
-      }
+        userId: user._id,
+        name: user.name,
+        username: user.username,
+        email: user.email,
+      },
+      process.env.ACCESS_TOKEN_SECRET,
+      { expiresIn: "1d" }
     );
 
-    // Send email with reset token
-    await sendPasswordResetEmail(email, resetToken);
-
-    res.json({ msg: "Email sent with password reset instructions" });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ msg: "Server error" });
-  }
-};
-
-// Fungsi untuk mengecek validitas token reset password
-export const verifyResetToken = async (req, res) => {
-  try {
-    const { token } = req.params;
-    if (!token)
-      return res.status(401).json({ msg: "No token, authorization denied" });
-
-    jwt.verify(token, process.env.RESET_TOKEN_SECRET, async (err, decoded) => {
-      if (err)
-        return res.status(403).json({ msg: "Invalid token, please try again" });
-
-      res.json({ msg: "Token verified", isValid: true });
+    res.json({
+      msg: "Username berhasil diubah",
+      accessToken,
+      username: newUsername,
     });
   } catch (error) {
     console.error(error);
@@ -147,28 +115,36 @@ export const verifyResetToken = async (req, res) => {
 // Fungsi untuk update password terbaru
 export const updatePassword = async (req, res) => {
   try {
-    const { newPassword, confirmNewPassword } = req.body;
+    const { currentPassword, newPassword, confirmPassword } = req.body;
 
-    if (newPassword !== confirmNewPassword) {
-      return res.status(400).json({ msg: "Passwords do not match" });
+    // Validasi password baru
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ msg: "Password baru tidak cocok" });
     }
 
+    // Dapatkan user dari token akses biasa (bukan reset token)
     const token = req.headers.authorization.split(" ")[1];
+    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
 
-    jwt.verify(token, process.env.RESET_TOKEN_SECRET, async (err, decoded) => {
-      if (err)
-        return res.status(403).json({ msg: "Invalid token, please try again" });
+    const user = await Users.findById(decoded.userId);
+    if (!user) return res.status(404).json({ msg: "User tidak ditemukan" });
 
-      const user = await Users.findById(decoded.id);
-      if (!user) return res.status(404).json({ msg: "User not found" });
+    // Verifikasi password saat ini
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ msg: "Password saat ini salah" });
+    }
 
-      const hashPassword = bcrypt.hashSync(newPassword, 10);
-      await Users.findByIdAndUpdate(decoded.id, { password: hashPassword });
+    // Update password
+    const hashPassword = await bcrypt.hash(newPassword, 10);
+    await Users.findByIdAndUpdate(decoded.userId, { password: hashPassword });
 
-      res.json({ msg: "Password updated successfully" });
-    });
+    res.json({ msg: "Password berhasil diubah" });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ msg: "Server error" });
+    res.status(500).json({
+      msg: "Server error",
+      error: error.message,
+    });
   }
 };

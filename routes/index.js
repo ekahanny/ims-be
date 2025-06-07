@@ -11,9 +11,8 @@ import {
   getUser,
   login,
   register,
-  resetPassword,
   updatePassword,
-  verifyResetToken,
+  updateUsername,
 } from "../controllers/Users.js";
 import {
   createLog,
@@ -60,12 +59,11 @@ router.put("/kategori/:id", updateKategori);
 router.delete("/kategori/:id", deleteKategori);
 
 // Auth
-router.get("/user", getUser);
+router.get("/user", authMiddleware, getUser);
 router.post("/login", login);
 router.post("/register", register);
-router.post("/reset-password", resetPassword);
-router.get("/verify-reset-token/:token", verifyResetToken);
 router.put("/update-password", authMiddleware, updatePassword);
+router.put("/update-username", authMiddleware, updateUsername);
 
 router.use((req, res) => {
   res.status(404);
