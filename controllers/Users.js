@@ -66,7 +66,7 @@ export const login = async (req, res) => {
       }
     );
 
-    res.json({ accessToken });
+    res.json({ accessToken, username });
   } catch (error) {
     console.log(error);
     res.status(500).json({ msg: "Server error" });
