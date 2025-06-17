@@ -34,29 +34,29 @@ import { dashboard } from "../controllers/Dashboard.js";
 const router = express.Router();
 
 // log produk
-router.post("/produk/log", createLog);
-router.get("/produk/log", getAllLogs);
-router.get("/produk/log/:id", getLogById);
-router.put("/produk/log/:id", updateLog);
-router.delete("/produk/log/:id", deleteLog);
+router.post("/produk/log", authMiddleware, createLog);
+router.get("/produk/log", authMiddleware, getAllLogs);
+router.get("/produk/log/:id", authMiddleware, getLogById);
+router.put("/produk/log/:id", authMiddleware, updateLog);
+router.delete("/produk/log/:id", authMiddleware, deleteLog);
 
 // produk
 router.post("/produk", authMiddleware, createProduk);
-router.get("/produk", getAllProduk);
+router.get("/produk", authMiddleware, getAllProduk);
 // router.get("/produk/:kode", getProdukByKode);
-router.get("/produk/:id", getProdukById);
-router.put("/produk/:id", updateProduk);
-router.delete("/produk/:id", deleteProduk);
+router.get("/produk/:id", authMiddleware, getProdukById);
+router.put("/produk/:id", authMiddleware, updateProduk);
+router.delete("/produk/:id", authMiddleware, deleteProduk);
 
 // dashboard
 router.get("/dashboard", dashboard);
 
 // Kategori
-router.post("/kategori", createKategori);
-router.get("/kategori", getAllKategori);
-router.get("/kategori/:id", getKategoriById);
-router.put("/kategori/:id", updateKategori);
-router.delete("/kategori/:id", deleteKategori);
+router.post("/kategori", authMiddleware, createKategori);
+router.get("/kategori", authMiddleware, getAllKategori);
+router.get("/kategori/:id", authMiddleware, getKategoriById);
+router.put("/kategori/:id", authMiddleware, updateKategori);
+router.delete("/kategori/:id", authMiddleware, deleteKategori);
 
 // Auth
 router.get("/user", authMiddleware, getUser);

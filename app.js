@@ -6,20 +6,20 @@ import cookieParser from "cookie-parser";
 import router from "./routes/index.js";
 import connectToMongoDB from "./config/Database.js";
 
-import morgan from "morgan";
+// import morgan from "morgan";
 dotenv.config();
 const app = express();
 
 try {
-	await connectToMongoDB;
-	console.log("Database connected");
+  await connectToMongoDB;
+  console.log("Database connected");
 } catch (error) {
-	console.log(error);
+  console.log(error);
 }
 
 app.use(cors({ credentials: true, origin: "http://localhost:3000" }));
 app.use(cookieParser());
-app.use(morgan("dev"));
+// app.use(morgan("dev"));
 app.use(express.json());
 app.use(router);
 

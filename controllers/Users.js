@@ -67,7 +67,7 @@ export const login = async (req, res) => {
       }
     );
 
-    res.json({ accessToken, username, email, password });
+    res.json({ accessToken, username, email });
   } catch (error) {
     console.log(error);
     res.status(500).json({ msg: "Server error" });
