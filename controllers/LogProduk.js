@@ -8,6 +8,12 @@ export const insertLog = async (req, res) => {
       return res.status(400).json({ msg: "Request body tidak boleh kosong" });
     }
 
+    const createdBy = req.userId;
+
+    if (!createdBy) {
+      return res.status(401).json({ msg: "User tidak terautentikasi" });
+    }
+
     const {
       kode_produk,
       nama_produk,
@@ -37,6 +43,7 @@ export const insertLog = async (req, res) => {
         stok: 0,
         kategori,
         tanggal,
+        createdBy,
       });
       produkExists = newProduk;
     }
@@ -79,6 +86,7 @@ export const insertLog = async (req, res) => {
       isProdukMasuk,
       harga,
       tanggal,
+      createdBy,
     });
 
     await newLog.save();

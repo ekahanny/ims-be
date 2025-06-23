@@ -16,6 +16,24 @@ export const getUser = async (req, res) => {
   }
 };
 
+// Tambahkan di controller User
+export const getUserById = async (req, res) => {
+  try {
+    const user = await Users.findById(req.params.id).select(
+      "-password -refreshToken"
+    ); // Exclude sensitive data
+
+    if (!user) {
+      return res.status(404).json({ msg: "User tidak ditemukan" });
+    }
+
+    res.json(user);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ msg: "Server error" });
+  }
+};
+
 export const register = async (req, res) => {
   const { username, nama, email, password, confPassword } = req.body;
 

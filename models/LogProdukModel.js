@@ -7,6 +7,11 @@ const logProdukSchema = new Schema({
     ref: "Produk",
     required: true,
   },
+  createdBy: {
+    type: Schema.Types.ObjectId,
+    ref: "Users",
+    required: true,
+  },
   tanggal: {
     type: Date,
   },

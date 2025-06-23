@@ -9,6 +9,7 @@ import {
 } from "../controllers/Produk.js";
 import {
   getUser,
+  getUserById,
   login,
   register,
   updatePassword,
@@ -60,6 +61,7 @@ router.delete("/kategori/:id", authMiddleware, deleteKategori);
 
 // Auth
 router.get("/user", authMiddleware, getUser);
+router.get("/users/:id", authMiddleware, getUserById);
 router.post("/login", login);
 router.post("/register", register);
 router.put("/update-password", authMiddleware, updatePassword);
