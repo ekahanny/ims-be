@@ -15,6 +15,9 @@ const logProdukSchema = new Schema({
   tanggal: {
     type: Date,
   },
+  tanggalKadaluarsa: {
+    type: Date,
+  },
   harga: {
     type: Number,
     min: 0,

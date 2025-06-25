@@ -31,6 +31,7 @@ import {
   updateKategori,
 } from "../controllers/Kategori.js";
 import { dashboard } from "../controllers/Dashboard.js";
+import { getStokByProdukId } from "../controllers/Stok.js";
 
 const router = express.Router();
 
@@ -51,6 +52,9 @@ router.delete("/produk/:id", authMiddleware, deleteProduk);
 
 // dashboard
 router.get("/dashboard", dashboard);
+
+// stok
+router.get("/stok/produk/:id", getStokByProdukId);
 
 // Kategori
 router.post("/kategori", authMiddleware, createKategori);

@@ -1,6 +1,7 @@
 import Produk from "../models/ProdukModel.js";
 import LogProduk from "../models/LogProdukModel.js";
 import { insertProduk } from "./Produk.js";
+import Stok from "../models/StokModel.js";
 
 export const insertLog = async (req, res) => {
   try {
@@ -22,13 +23,16 @@ export const insertLog = async (req, res) => {
       kategori,
       isProdukMasuk,
       tanggal,
+      tanggalKadaluarsa,
     } = req.body;
 
     if (
       !kode_produk ||
       !nama_produk ||
       harga === undefined ||
-      stok === undefined
+      stok === undefined ||
+      !tanggal ||
+      !tanggalKadaluarsa // Pastikan tanggalKadaluarsa tidak kosong
     ) {
       return res.status(400).json({ msg: "Semua field harus diisi" });
     }
@@ -48,52 +52,78 @@ export const insertLog = async (req, res) => {
       produkExists = newProduk;
     }
 
-    // Cari tanggal berapa suatu barang masuk pertama kali
-    const firstInProdLog = await LogProduk.findOne({
-      produk: produkExists._id,
-      isProdukMasuk: true,
-    }).sort({ tanggal: 1 });
+    // Handle stok masuk/keluar
+    if (!isProdukMasuk) {
+      const totalStok = await Stok.aggregate([
+        {
+          $match: {
+            produk: produkExists._id,
+            tanggal: { $lte: new Date(tanggal) },
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: "$stok" },
+          },
+        },
+      ]);
 
-    // Jika ini adalah log keluar dan ada log masuk sebelumnya
-    if (!isProdukMasuk && firstInProdLog) {
-      const inputDate = new Date(tanggal);
-      const firstInDate = new Date(firstInProdLog.tanggal);
+      const availableStok = totalStok.length > 0 ? totalStok[0].total : 0;
 
-      if (inputDate < firstInDate) {
-        return res.status(400).json({
-          msg: `Tanggal keluar tidak boleh lebih awal dari tanggal masuk pertama (${firstInDate.toLocaleDateString()})`,
+      if (stok > availableStok) {
+        return res.status(400).json({ msg: "Stok tidak cukup" });
+      }
+
+      const newStokEntry = new Stok({
+        produk: produkExists._id,
+        stok: -stok,
+        tanggal,
+        createdBy,
+      });
+      await newStokEntry.save();
+    } else {
+      const existingStok = await Stok.findOne({
+        produk: produkExists._id,
+        tanggal: tanggalKadaluarsa,
+      });
+
+      if (existingStok) {
+        existingStok.stok += stok;
+        await existingStok.save();
+      } else {
+        const newStokEntry = new Stok({
+          produk: produkExists._id,
+          stok: stok,
+          tanggal: tanggalKadaluarsa,
+          createdBy,
         });
+        await newStokEntry.save();
       }
     }
 
-    if (!isProdukMasuk && stok > produkExists.stok) {
-      return res.status(400).json({ msg: "Stok tidak cukup" });
-    }
-
-    const newStok = isProdukMasuk
-      ? produkExists.stok + stok
-      : produkExists.stok - stok;
-
-    const updatedProduk = await Produk.findOneAndUpdate(
-      { kode_produk },
-      { stok: newStok },
-      { new: true }
-    );
-
+    // Buat log produk - TAMBAHKAN tanggalKadaluarsa di sini
     const newLog = new LogProduk({
-      produk: updatedProduk._id,
+      produk: produkExists._id,
       stok,
       isProdukMasuk,
       harga,
       tanggal,
+      tanggalKadaluarsa, // <-- Ini yang harus ditambahkan
       createdBy,
     });
 
     await newLog.save();
-    return res.status(201).json({ LogProduk: newLog });
+    return res.status(201).json({
+      LogProduk: newLog,
+      message: "Log produk berhasil disimpan",
+    });
   } catch (error) {
     console.error("Error di insertLog:", error);
-    return res.status(500).json({ msg: "Server error" });
+    return res.status(500).json({
+      msg: "Server error",
+      error: error.message,
+    });
   }
 };
 
