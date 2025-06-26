@@ -15,7 +15,7 @@ export const insertLog = async (req, res) => {
       return res.status(401).json({ msg: "User tidak terautentikasi" });
     }
 
-    const {
+    let {
       kode_produk,
       nama_produk,
       harga,
@@ -32,7 +32,7 @@ export const insertLog = async (req, res) => {
       harga === undefined ||
       stok === undefined ||
       !tanggal ||
-      !tanggalKadaluarsa // Pastikan tanggalKadaluarsa tidak kosong
+      (isProdukMasuk && !tanggalKadaluarsa) // Pastikan tanggalKadaluarsa tidak kosong
     ) {
       return res.status(400).json({ msg: "Semua field harus diisi" });
     }
@@ -54,38 +54,44 @@ export const insertLog = async (req, res) => {
 
     // Handle stok masuk/keluar
     if (!isProdukMasuk) {
-      const totalStok = await Stok.aggregate([
-        {
-          $match: {
-            produk: produkExists._id,
-            tanggal: { $lte: new Date(tanggal) },
-          },
-        },
-        {
-          $group: {
-            _id: null,
-            total: { $sum: "$stok" },
-          },
-        },
-      ]);
+      const stoks = await Stok.find({
+        produk: produkExists._id,
+        stok: { $gt: 0 },
+        tanggalKadaluarsa: { $gte: new Date() },
+      }).sort({ tanggalKadaluarsa: 1 });
 
-      const availableStok = totalStok.length > 0 ? totalStok[0].total : 0;
-
-      if (stok > availableStok) {
-        return res.status(400).json({ msg: "Stok tidak cukup" });
+      let totalStok = stoks.reduce((total, stok) => total + stok.stok, 0);
+      if (totalStok < stok) {
+        return res.status(400).json({
+          msg: "Stok tidak mencukupi",
+        });
       }
 
-      const newStokEntry = new Stok({
-        produk: produkExists._id,
-        stok: -stok,
-        tanggal,
-        createdBy,
-      });
-      await newStokEntry.save();
+      if (stoks.length > 0) {
+        let index = 0;
+        while (stok > 0) {
+          if (stoks[index].stok >= stok) {
+            stoks[index].stok -= stok;
+            stok = 0;
+            await stoks[index].save();
+            break;
+          } else {
+            stok -= stoks[index].stok;
+            stoks[index].stok = 0;
+            await stoks[index].save();
+            index++;
+            if (index >= stoks.length) {
+              return res.status(400).json({
+                msg: "Stok tidak cukup untuk mengurangi",
+              });
+            }
+          }
+        }
+      }
     } else {
       const existingStok = await Stok.findOne({
         produk: produkExists._id,
-        tanggal: tanggalKadaluarsa,
+        tanggalKadaluarsa: tanggalKadaluarsa,
       });
 
       if (existingStok) {
@@ -95,7 +101,7 @@ export const insertLog = async (req, res) => {
         const newStokEntry = new Stok({
           produk: produkExists._id,
           stok: stok,
-          tanggal: tanggalKadaluarsa,
+          tanggalKadaluarsa: tanggalKadaluarsa,
           createdBy,
         });
         await newStokEntry.save();
@@ -109,7 +115,7 @@ export const insertLog = async (req, res) => {
       isProdukMasuk,
       harga,
       tanggal,
-      tanggalKadaluarsa, // <-- Ini yang harus ditambahkan
+      tanggalKadaluarsa,
       createdBy,
     });
 

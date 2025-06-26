@@ -4,7 +4,9 @@ export const getStokByProdukId = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const result = await getStokByProdukId(id);
+    const result = await Stok.find({
+      produk: id,
+    }).sort({ tanggalKadaluarsa: 1 });
 
     res.status(200).json(result);
   } catch (error) {
