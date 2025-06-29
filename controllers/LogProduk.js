@@ -32,7 +32,7 @@ export const insertLog = async (req, res) => {
       harga === undefined ||
       stok === undefined ||
       !tanggal ||
-      (isProdukMasuk && !tanggalKadaluarsa) // Pastikan tanggalKadaluarsa tidak kosong
+      (isProdukMasuk && !tanggalKadaluarsa) // Pastikan tanggalKadaluarsa tidak kosong untuk barang masuk, untuk barang keluar boleh kosong
     ) {
       return res.status(400).json({ msg: "Semua field harus diisi" });
     }
@@ -54,14 +54,17 @@ export const insertLog = async (req, res) => {
 
     // Handle stok masuk/keluar
     if (!isProdukMasuk) {
+      // ambil semua stok tersedia beserta tanggal kadaluarsanya
       const stoks = await Stok.find({
         produk: produkExists._id,
         stok: { $gt: 0 },
         tanggalKadaluarsa: { $gte: new Date() },
       }).sort({ tanggalKadaluarsa: 1 });
 
+      // Hitung total stok dan pastikan total stok mencukupi
       let totalStok = stoks.reduce((total, stok) => total + stok.stok, 0);
       if (totalStok < stok) {
+        // jika stok keseluruhan tidak mencukupi
         return res.status(400).json({
           msg: "Stok tidak mencukupi",
         });

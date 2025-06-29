@@ -54,7 +54,7 @@ router.delete("/produk/:id", authMiddleware, deleteProduk);
 router.get("/dashboard", dashboard);
 
 // stok
-router.get("/stok/produk/:id", getStokByProdukId);
+router.get("/stok/produk/:id", authMiddleware, getStokByProdukId);
 
 // Kategori
 router.post("/kategori", authMiddleware, createKategori);
