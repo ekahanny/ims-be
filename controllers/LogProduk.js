@@ -6,7 +6,9 @@ import Stok from "../models/StokModel.js";
 export const insertLog = async (req, res) => {
   try {
     if (!req.body || Object.keys(req.body).length === 0) {
-      return res.status(400).json({ msg: "Request body tidak boleh kosong" });
+      return res.status(400).json({
+        msg: "Request body tidak boleh kosong",
+      });
     }
 
     const createdBy = req.userId;
@@ -53,6 +55,7 @@ export const insertLog = async (req, res) => {
     }
 
     // Handle stok masuk/keluar
+    let stokRecords = new Map();
     if (!isProdukMasuk) {
       // ambil semua stok tersedia beserta tanggal kadaluarsanya
       const stoks = await Stok.find({
@@ -72,14 +75,17 @@ export const insertLog = async (req, res) => {
 
       if (stoks.length > 0) {
         let index = 0;
-        while (stok > 0) {
-          if (stoks[index].stok >= stok) {
-            stoks[index].stok -= stok;
-            stok = 0;
+        let stokToRemove = stok;
+        while (stokToRemove > 0) {
+          if (stoks[index].stok >= stokToRemove) {
+            stoks[index].stok -= stokToRemove;
+            stokRecords.set(stoks[index].id, stokToRemove);
+            stokToRemove = 0;
             await stoks[index].save();
             break;
           } else {
-            stok -= stoks[index].stok;
+            stokToRemove -= stoks[index].stok;
+            stokRecords.set(stoks[index].id, stoks[index].stok);
             stoks[index].stok = 0;
             await stoks[index].save();
             index++;
@@ -99,6 +105,7 @@ export const insertLog = async (req, res) => {
 
       if (existingStok) {
         existingStok.stok += stok;
+        stokRecords.set(existingStok.id, stok);
         await existingStok.save();
       } else {
         const newStokEntry = new Stok({
@@ -107,6 +114,7 @@ export const insertLog = async (req, res) => {
           tanggalKadaluarsa: tanggalKadaluarsa,
           createdBy,
         });
+        stokRecords.set(newStokEntry.id, stok);
         await newStokEntry.save();
       }
     }
@@ -120,6 +128,7 @@ export const insertLog = async (req, res) => {
       tanggal,
       tanggalKadaluarsa,
       createdBy,
+      stokRecord: stokRecords,
     });
 
     await newLog.save();
@@ -183,19 +192,85 @@ export const updateLog = async (req, res) => {
     }
 
     // 2. Cari kode produk yang baru diperbaharui
-    const produk = await Produk.findOne({ kode_produk: req.body.kode_produk });
+    const produk = await Produk.findOne({
+      kode_produk: req.body.kode_produk,
+    });
     if (!produk) {
       return res.status(404).json({ msg: "Produk tidak ditemukan" });
     }
 
     // 3. Update log dengan data yang baru
     const updatedLog = await LogProduk.findById(req.params.id);
+    let stokRecords = updatedLog.stokRecord;
     if (updatedLog.stok !== req.body.stok) {
       const selisih = updatedLog.stok - req.body.stok;
       if (updatedLog.isProdukMasuk) {
-        produk.stok -= selisih;
+        for (const [recordId, stock] of updatedLog.stokRecord) {
+          const stokData = await Stok.findById(recordId);
+          stokData.stok -= selisih;
+          await stokData.save();
+        }
       } else {
-        produk.stok += selisih;
+        if (selisih > 0) {
+          let stokToAdd = selisih;
+          let stokRecordReverse = [...updatedLog.stokRecord.entries()];
+          stokRecordReverse.reverse();
+
+          for (const [recordId, stock] of stokRecordReverse) {
+            const stokData = await Stok.findById(recordId);
+            if (stokToAdd >= stock) {
+              stokData.stok += stock;
+              stokToAdd -= stock;
+              stokRecords.delete(recordId);
+            } else {
+              stokData.stok += stokToAdd;
+              stokRecords.set(recordId, stock - stokToAdd);
+              stokToAdd = 0;
+            }
+            await stokData.save();
+            if (stokToAdd <= 0) {
+              break;
+            }
+          }
+        } else {
+          const stoks = await Stok.find({
+            produk: produk._id,
+            stok: { $gt: 0 },
+            tanggalKadaluarsa: { $gte: new Date() },
+          }).sort({ tanggalKadaluarsa: 1 });
+
+          let totalStok = stoks.reduce((total, stok) => total + stok.stok, 0);
+          if (totalStok < selisih) {
+            return res.status(400).json({
+              msg: "Stok tidak mencukupi",
+            });
+          }
+
+          if (stoks.length > 0) {
+            let index = 0;
+            let stokToRemove = -selisih;
+            while (stokToRemove > 0) {
+              if (stoks[index].stok >= stokToRemove) {
+                stoks[index].stok -= stokToRemove;
+                stokRecords.set(stoks[index].id, stokToRemove);
+                stokToRemove = 0;
+                await stoks[index].save();
+                break;
+              } else {
+                stokToRemove -= stoks[index].stok;
+                stokRecords.set(stoks[index].id, stoks[index].stok);
+                stoks[index].stok = 0;
+                await stoks[index].save();
+                index++;
+                if (index >= stoks.length) {
+                  return res.status(400).json({
+                    msg: "Stok tidak cukup untuk mengurangi",
+                  });
+                }
+              }
+            }
+          }
+        }
       }
       produk.save();
     }
@@ -204,6 +279,7 @@ export const updateLog = async (req, res) => {
     updatedLog.kode_produk = req.body.kode_produk;
     updatedLog.tanggal = req.body.tanggal;
     updatedLog.stok = req.body.stok;
+    updatedLog.stokRecord = stokRecords;
     updatedLog.save();
 
     console.log("updated log: ", updatedLog);
@@ -231,9 +307,17 @@ export const deleteLog = async (req, res) => {
     }
 
     if (deletedLog.isProdukMasuk) {
-      produk.stok -= deletedLog.stok;
+      for (const [recordId, stock] of deletedLog.stokRecord) {
+        const stokData = await Stok.findById(recordId);
+        stokData.stok -= stock;
+        await stokData.save();
+      }
     } else {
-      produk.stok += deletedLog.stok;
+      for (const [recordId, stock] of deletedLog.stokRecord) {
+        const stokData = await Stok.findById(recordId);
+        stokData.stok += stock;
+        await stokData.save();
+      }
     }
     produk.save();
 

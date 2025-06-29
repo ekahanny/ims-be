@@ -1,4 +1,5 @@
 import Produk from "../models/ProdukModel.js";
+import mongoose from "mongoose";
 
 export const insertProduk = async (body) => {
   const produkExist = await Produk.findOne({
@@ -35,7 +36,26 @@ export const createProduk = async (req, res) => {
 
 export const getAllProduk = async (req, res) => {
   try {
-    const produkList = await Produk.find();
+    const produkList = await Produk.aggregate([
+      {
+        $lookup: {
+          from: "stoks",
+          localField: "_id",
+          foreignField: "produk",
+          as: "stok_entries",
+        },
+      },
+      {
+        $addFields: {
+          stok: { $sum: "$stok_entries.stok" },
+        },
+      },
+      {
+        $project: {
+          stok_entries: 0,
+        },
+      },
+    ]);
     res.json({ Produk: produkList });
   } catch (error) {
     console.log(error);
@@ -58,16 +78,45 @@ export const getProdukByKode = async (req, res) => {
 
 export const getProdukById = async (req, res) => {
   try {
-    const produk = await Produk.findById(req.params.id);
-    if (!produk) {
-      return res.status(404).json({ msg: "Produk tidak ditemukan" });
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ msg: "Invalid Product ID format" });
     }
-    res.json({ ...produk._doc });
+
+    const produkArray = await Produk.aggregate([
+      {
+        $match: {
+          _id: new mongoose.Types.ObjectId(req.params.id),
+        },
+      },
+      {
+        $lookup: {
+          from: "stoks",
+          localField: "_id",
+          foreignField: "produk",
+          as: "stok_entries",
+        },
+      },
+      {
+        $addFields: {
+          stok: { $sum: "$stok_entries.stok" },
+        },
+      },
+      {
+        $project: {
+          stok_entries: 0,
+        },
+      },
+    ]);
+
+    if (produkArray.length === 0) {
+      return res.status(404).json({ msg: "Produk not found" });
+    }
+
+    const produk = produkArray[0];
+
+    res.json({ Produk: produk });
   } catch (error) {
     console.log(error);
-    if (error.kind === "ObjectId") {
-      return res.status(400).json({ msg: "ID tidak valid" });
-    }
     res.status(500).json({ msg: "Server error" });
   }
 };

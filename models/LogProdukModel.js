@@ -27,6 +27,10 @@ const logProdukSchema = new Schema({
     required: true,
     min: 0,
   },
+  stokRecord: {
+    type: Map,
+    of: Number,
+  },
   isProdukMasuk: {
     type: Boolean,
     required: true,
